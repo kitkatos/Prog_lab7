@@ -1,0 +1,5 @@
+rootProject.name = 'LR7'
+include 'common'
+include 'client'
+include 'server'
+
