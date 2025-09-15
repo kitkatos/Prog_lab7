@@ -12,7 +12,6 @@ public class Movie implements Comparable<Movie>, Serializable {
     private final SimpleDateFormat DATE_FORMAT = new SimpleDateFormat("yyyy-MM-dd");
     @Getter @Setter
     private int id;
-    private static int nextId = 1;
     @Getter @Setter
     private String name;
     @Getter @Setter
@@ -29,6 +28,8 @@ public class Movie implements Comparable<Movie>, Serializable {
     private MpaaRating mpaaRating;
     @Getter @Setter
     private Person director;
+    @Getter @Setter
+    private String ownerLogin;
 
     public Movie(int id, String name, Coordinates coordinates, long oscarsCount,
                  Long usaBoxOffice, MovieGenre genre, MpaaRating mpaaRating, Person director){
@@ -45,7 +46,6 @@ public class Movie implements Comparable<Movie>, Serializable {
 
     public Movie(String name, Coordinates coordinates, long oscarsCount,
                  Long usaBoxOffice, MovieGenre genre, MpaaRating mpaaRating, Person director){
-        this.id = nextId++;
         this.name = name;
         this.coordinates = coordinates;
         this.creationDate = new Date();
@@ -56,15 +56,29 @@ public class Movie implements Comparable<Movie>, Serializable {
         this.director = director;
     }
 
+    public Movie(int id, String name, Coordinates coordinates, Date creationDate,
+                 long oscarsCount, Long usaBoxOffice, MovieGenre genre,
+                 MpaaRating mpaaRating, Person director, String ownerLogin) {
+        this.id = id;
+        this.name = name;
+        this.coordinates = coordinates;
+        this.creationDate = creationDate != null ? creationDate : new Date();
+        this.oscarsCount = oscarsCount;
+        this.usaBoxOffice = usaBoxOffice;
+        this.genre = genre;
+        this.mpaaRating = mpaaRating;
+        this.director = director;
+        this.ownerLogin = ownerLogin;
+    }
 
     @Override
     public String toString(){
         return String.format(
-            "Movie{id=%s, name='%s', coordinates=%s, creationDate=%s, oscarsCount=%s, usaBoxOffice=%s%s%s%s}",
+            "Movie{id=%s, name='%s', coordinates=%s, creationDate=%s, oscarsCount=%s, usaBoxOffice=%s%s%s%s, owner_id=%s}",
             id, name, coordinates, DATE_FORMAT.format(creationDate), oscarsCount, usaBoxOffice,
             (genre != null ? ", genre=" + genre : ""),
             (mpaaRating != null ? ", mpaaRating=" + mpaaRating : ""),
-            (director != null ? ", director=" + director : "")
+            (director != null ? ", director=" + director : ""), ownerLogin
         );
     }
 
