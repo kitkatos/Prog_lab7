@@ -8,6 +8,7 @@ import java.util.Comparator;
 import java.util.Date;
 import java.util.List;
 import java.util.TreeSet;
+import java.util.concurrent.locks.ReentrantLock;
 import java.util.stream.Collectors;
 
 /**
@@ -15,11 +16,14 @@ import java.util.stream.Collectors;
  * Содержит методы для выполнения команд получения данных из коллекции(копии бдшки).
  * Содержит методы для изменения бдшки и синхронизации с коллекцией.
  * Содержит метод для аутентификации.
+ * Методы, изменяющие бдшку, используют синхронизацию чтения и записи.
  */
 @Log4j2
 public class TreeSetCollectionManager implements CollectionManager{
     private TreeSet<Movie> collection;
     private Connection connection;
+
+    private final ReentrantLock lock = new ReentrantLock();
 
     public TreeSetCollectionManager(TreeSet<Movie> collection, Connection connection){ // poamotret
         this.collection = collection;
@@ -82,6 +86,7 @@ public class TreeSetCollectionManager implements CollectionManager{
      */
     @Override
     public void addElem(Movie movie){
+        lock.lock();
         String sql = """
             INSERT INTO movies (
                 name, coordinate_x, coordinate_y, creation_date,
@@ -105,6 +110,8 @@ public class TreeSetCollectionManager implements CollectionManager{
             }
         } catch (SQLException e) {
             log.error("Ошибка добавления элемента в бд: {}", e.getMessage());
+        } finally {
+            lock.unlock();
         }
     }
 
@@ -117,6 +124,7 @@ public class TreeSetCollectionManager implements CollectionManager{
      */
     @Override
     public void updateElemById(int id, Movie newMovie) {
+        lock.lock();
         String sql = """
             UPDATE movies 
             SET name = ?, coordinate_x = ?, coordinate_y = ?, creation_date = ?,
@@ -153,6 +161,8 @@ public class TreeSetCollectionManager implements CollectionManager{
 
         } catch (SQLException e) {
             System.err.println("Ошибка обновления элемента в бд: " + e.getMessage());
+        } finally {
+            lock.unlock();
         }
     }
 
@@ -163,6 +173,7 @@ public class TreeSetCollectionManager implements CollectionManager{
      */
     @Override
     public void removeElemById(int id, String login) {
+        lock.lock();
         String sql = "DELETE FROM movies WHERE (id = ?) and (owner_login = ?)";
 
         try (PreparedStatement pstmt = connection.prepareStatement(sql)) {
@@ -178,6 +189,8 @@ public class TreeSetCollectionManager implements CollectionManager{
             }
         } catch (SQLException e) {
             log.error("Ошибка удаления элемента из бд: {}", e.getMessage());
+        } finally {
+            lock.unlock();
         }
     }
 
@@ -188,6 +201,7 @@ public class TreeSetCollectionManager implements CollectionManager{
      */
     @Override
     public void deleteAllElem(String login){
+        lock.lock();
         String sql = "DELETE FROM movies WHERE owner_login = ?";
 
         try (PreparedStatement pstmt = connection.prepareStatement(sql)) {
@@ -201,6 +215,8 @@ public class TreeSetCollectionManager implements CollectionManager{
             log.info("Элементы с владельцем {} успешно удалены из коллекции", login);
         } catch (SQLException e) {
             log.error("Ошибка очистки коллекции: {} ",e.getMessage());
+        } finally {
+            lock.unlock();
         }
     }
 
@@ -212,6 +228,7 @@ public class TreeSetCollectionManager implements CollectionManager{
      */
     @Override
     public boolean addElemIfMax(Movie maxMovie){
+        lock.lock();
         boolean ans =  collection.stream()
                 .filter(m -> m.compareTo(maxMovie) > 0).findAny().isPresent();
         if (ans) {
@@ -219,6 +236,7 @@ public class TreeSetCollectionManager implements CollectionManager{
         } else {
             log.info("Элемент не оказался максимальным и не добавлен в бд");
         }
+        lock.unlock();
         return ans;
     }
 
@@ -230,6 +248,7 @@ public class TreeSetCollectionManager implements CollectionManager{
      * @return
      */
     public int removeGreaterElements(Movie movie) {
+        lock.lock();
         List<Integer> idsToDelete = collection.stream()
                 .filter(m -> m.compareTo(movie) > 0)  // По условию сравнения
                 .filter(m -> m.getOwnerLogin() != null && m.getOwnerLogin().equals(movie.getOwnerLogin()))  // Проверка прав
@@ -248,6 +267,7 @@ public class TreeSetCollectionManager implements CollectionManager{
             }
         }
         log.info("Удалено {} элементов", deletedCount);
+        lock.unlock();
         return deletedCount;
     }
 
@@ -349,7 +369,7 @@ public class TreeSetCollectionManager implements CollectionManager{
      */
     public boolean authenticate(String login, String password) {
         String hashedPassword = PasswordHasher.sha1(password);
-
+        lock.lock();
         try {
             String selectSql = "SELECT password FROM users WHERE login = ?";
             try (PreparedStatement stmt = connection.prepareStatement(selectSql)) {
@@ -375,7 +395,10 @@ public class TreeSetCollectionManager implements CollectionManager{
         } catch (SQLException e) {
             log.error("Ошибка при аутентицикации: {}", e.getMessage());
             return false;
+        } finally {
+            lock.unlock();
         }
+
     }
 
     /**
@@ -383,6 +406,7 @@ public class TreeSetCollectionManager implements CollectionManager{
      * Полностью очищает коллекцию и добавляет все элементы из бдшки.
      */
     public void fullSynchronization() {
+        lock.lock();
         collection.clear();
         String sql = "SELECT * FROM movies";
 
@@ -421,5 +445,6 @@ public class TreeSetCollectionManager implements CollectionManager{
         } catch (SQLException e) {
             log.error("Ошибка пересоздания таблицы : {}", e.getMessage());
         }
+        lock.unlock();
     }
 }
