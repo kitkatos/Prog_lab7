@@ -1,0 +1,16 @@
+package com.example.common.IO.interfaces;
+
+import com.example.common.network.NetworkObject;
+
+/**
+ * Интерфейс для всех классов парсинга введенных данных.
+ * Нужен для того, чтобы в рамках программы парсинг для тг и консоль не отличались.
+ */
+public interface ParserManager {
+    /**
+     * Преобразует ввод в специализированный рекорд.
+     * @param input введенная строка
+     * @return команда, параметры и пользователь
+     */
+    public NetworkObject getNetworkObject(String input);
+}
