@@ -1,5 +1,6 @@
-package com.example.common.IO.movieInput;
+package com.example.IO.movieInput;
 
+import com.example.IO.exception.OutOfRangeException;
 import com.example.common.IO.exception.*;
 import com.example.common.model.*;
 

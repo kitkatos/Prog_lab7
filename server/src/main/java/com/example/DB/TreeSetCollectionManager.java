@@ -1,6 +1,6 @@
 package com.example.DB;
 
-import com.example.model.*;
+import com.example.common.model.*;
 import lombok.extern.log4j.Log4j2;
 
 import java.sql.*;
@@ -85,8 +85,7 @@ public class TreeSetCollectionManager implements CollectionManager{
      * @param movie новый элемент
      */
     @Override
-    public void addElem(Movie movie){
-        lock.lock();
+    public void addElem(Movie movie) {
         String sql = """
             INSERT INTO movies (
                 name, coordinate_x, coordinate_y, creation_date,
@@ -96,6 +95,7 @@ public class TreeSetCollectionManager implements CollectionManager{
             ) VALUES (?, ?, ?, ?, ?, ?, ?::movie_genre, ?::mpaa_rating, ?, ?, ?, ?, ?, ?)
             RETURNING id
             """;
+        lock.lock();
 
         try (PreparedStatement pstmt = connection.prepareStatement(sql)) {
             setMovieParameters(pstmt, movie);
@@ -124,19 +124,20 @@ public class TreeSetCollectionManager implements CollectionManager{
      */
     @Override
     public void updateElemById(int id, Movie newMovie) {
-        lock.lock();
         String sql = """
             UPDATE movies 
             SET name = ?, coordinate_x = ?, coordinate_y = ?, creation_date = ?,
                 oscars_count = ?, usa_box_office = ?, genre = ?, mpaa_rating = ?,
                 director_name = ?, director_birthday = ?, director_height = ?,
                 director_weight = ?, director_passport_id = ?, owner_login = ?
-            WHERE id = ?
+            WHERE (id = ?) and (owner_login = ?)
             """;
+        lock.lock();
 
         try (PreparedStatement pstmt = connection.prepareStatement(sql)) {
             setMovieParameters(pstmt, newMovie);
             pstmt.setInt(15, id);
+            pstmt.setString(16, newMovie.getOwnerLogin());
 
             int affectedRows = pstmt.executeUpdate();
 
@@ -173,8 +174,8 @@ public class TreeSetCollectionManager implements CollectionManager{
      */
     @Override
     public void removeElemById(int id, String login) {
-        lock.lock();
         String sql = "DELETE FROM movies WHERE (id = ?) and (owner_login = ?)";
+        lock.lock();
 
         try (PreparedStatement pstmt = connection.prepareStatement(sql)) {
             pstmt.setInt(1, id);
@@ -201,8 +202,8 @@ public class TreeSetCollectionManager implements CollectionManager{
      */
     @Override
     public void deleteAllElem(String login){
-        lock.lock();
         String sql = "DELETE FROM movies WHERE owner_login = ?";
+        lock.lock();
 
         try (PreparedStatement pstmt = connection.prepareStatement(sql)) {
             pstmt.setString(1, login);
@@ -228,7 +229,6 @@ public class TreeSetCollectionManager implements CollectionManager{
      */
     @Override
     public boolean addElemIfMax(Movie maxMovie){
-        lock.lock();
         boolean ans =  collection.stream()
                 .filter(m -> m.compareTo(maxMovie) > 0).findAny().isPresent();
         if (ans) {
@@ -236,7 +236,6 @@ public class TreeSetCollectionManager implements CollectionManager{
         } else {
             log.info("Элемент не оказался максимальным и не добавлен в бд");
         }
-        lock.unlock();
         return ans;
     }
 
@@ -248,7 +247,6 @@ public class TreeSetCollectionManager implements CollectionManager{
      * @return
      */
     public int removeGreaterElements(Movie movie) {
-        lock.lock();
         List<Integer> idsToDelete = collection.stream()
                 .filter(m -> m.compareTo(movie) > 0)  // По условию сравнения
                 .filter(m -> m.getOwnerLogin() != null && m.getOwnerLogin().equals(movie.getOwnerLogin()))  // Проверка прав
@@ -267,7 +265,6 @@ public class TreeSetCollectionManager implements CollectionManager{
             }
         }
         log.info("Удалено {} элементов", deletedCount);
-        lock.unlock();
         return deletedCount;
     }
 
@@ -370,6 +367,7 @@ public class TreeSetCollectionManager implements CollectionManager{
     public boolean authenticate(String login, String password) {
         String hashedPassword = PasswordHasher.sha1(password);
         lock.lock();
+
         try {
             String selectSql = "SELECT password FROM users WHERE login = ?";
             try (PreparedStatement stmt = connection.prepareStatement(selectSql)) {
@@ -406,9 +404,9 @@ public class TreeSetCollectionManager implements CollectionManager{
      * Полностью очищает коллекцию и добавляет все элементы из бдшки.
      */
     public void fullSynchronization() {
-        lock.lock();
         collection.clear();
         String sql = "SELECT * FROM movies";
+        lock.lock();
 
         try (Statement stmt = connection.createStatement();
              ResultSet rs = stmt.executeQuery(sql)) {
@@ -444,7 +442,9 @@ public class TreeSetCollectionManager implements CollectionManager{
             }
         } catch (SQLException e) {
             log.error("Ошибка пересоздания таблицы : {}", e.getMessage());
+        } finally {
+            lock.unlock();
         }
-        lock.unlock();
+
     }
 }

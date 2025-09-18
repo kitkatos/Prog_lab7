@@ -1,4 +1,4 @@
-package com.example.network.serializer;
+package com.example.common.network.serializer;
 
 import lombok.extern.log4j.Log4j2;
 

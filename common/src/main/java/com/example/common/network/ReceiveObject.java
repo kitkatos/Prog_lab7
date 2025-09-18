@@ -1,4 +1,6 @@
 package com.example.common.network;
 
-public record ReceiveObject() {
+import java.net.InetSocketAddress;
+
+public record ReceiveObject(NetworkObject object, InetSocketAddress address) {
 }

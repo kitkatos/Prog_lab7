@@ -1,11 +1,9 @@
 package com.example;
 
-import java.io.Serializable;
+public class MainServer {
+    static Server server = new Server(1112);
 
-public class main {
-    Server server = new Server();
-
-    public void main() {
+    public static void main(String[] args) {
         server.start();
     }
 }

@@ -1,8 +1,8 @@
-package com.example.common.IO.movieInput;
+package com.example.IO.movieInput;
 
-import com.example.common.IO.exception.EmptyInputException;
-import com.example.common.IO.interfaces.OutputManager;
-import com.example.common.IO.interfaces.InputManager;
+import com.example.IO.exception.EmptyInputException;
+import com.example.IO.interfaces.OutputManager;
+import com.example.IO.interfaces.InputManager;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 

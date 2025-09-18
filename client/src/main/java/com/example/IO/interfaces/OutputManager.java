@@ -1,4 +1,4 @@
-package com.example.common.IO.interfaces;
+package com.example.IO.interfaces;
 
 /**
  * Интерфейс для всех классов вывода данных.

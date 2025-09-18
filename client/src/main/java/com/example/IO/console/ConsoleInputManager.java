@@ -1,6 +1,6 @@
-package com.example.common.IO.console;
+package com.example.IO.console;
 
-import com.example.common.IO.interfaces.InputManager;
+import com.example.IO.interfaces.InputManager;
 
 import java.util.Scanner;
 

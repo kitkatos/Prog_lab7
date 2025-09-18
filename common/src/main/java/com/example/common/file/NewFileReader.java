@@ -1,4 +1,4 @@
-package com.example.file;
+package com.example.common.file;
 
 import java.io.IOException;
 import java.util.List;

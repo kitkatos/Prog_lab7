@@ -1,6 +1,6 @@
-package com.example.file;
+package com.example.common.file;
 
-import com.example.model.*;
+import com.example.common.model.*;
 
 import java.text.ParseException;
 import java.text.SimpleDateFormat;

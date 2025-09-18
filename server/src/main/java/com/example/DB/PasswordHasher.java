@@ -6,6 +6,11 @@ import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 
+/**
+ * Класс для хэширования пароля.
+ * Преобразует строку данных по алгоритму SHA-1.
+ * Не использует соль, так что возможны коллизии.
+ */
 @Log4j2
 public class PasswordHasher {
     public static String sha1(String input) {

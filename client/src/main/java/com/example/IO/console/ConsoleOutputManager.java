@@ -1,6 +1,6 @@
-package com.example.common.IO.console;
+package com.example.IO.console;
 
-import com.example.common.IO.interfaces.OutputManager;
+import com.example.IO.interfaces.OutputManager;
 import lombok.extern.log4j.Log4j2;
 
 import java.io.PrintStream;

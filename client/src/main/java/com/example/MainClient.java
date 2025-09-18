@@ -1,4 +1,4 @@
 package com.example;
 
-public class main {
+public class MainClient {
 }

@@ -1,4 +1,4 @@
-package com.example.common.IO.movieInput;
+package com.example.IO.movieInput;
 
 import com.example.common.model.*;
 import lombok.extern.log4j.Log4j2;

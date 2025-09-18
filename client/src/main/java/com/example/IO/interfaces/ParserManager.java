@@ -1,4 +1,4 @@
-package com.example.common.IO.interfaces;
+package com.example.IO.interfaces;
 
 import com.example.common.network.NetworkObject;
 

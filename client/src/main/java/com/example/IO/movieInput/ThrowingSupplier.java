@@ -1,4 +1,4 @@
-package com.example.common.IO.movieInput;
+package com.example.IO.movieInput;
 
 /**
  * Функицональный интерфейс, необходимый для файбрики.

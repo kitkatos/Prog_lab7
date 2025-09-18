@@ -1,11 +1,10 @@
-package com.example.command;
+package com.example.common.command;
 
 
-import com.example.Command;
+import com.example.common.network.ApplicationStatus;
 import lombok.Getter;
 import lombok.extern.log4j.Log4j2;
-import com.example.ApplicationStatus;
-import com.example.network.NetworkObject;
+import com.example.common.network.NetworkObject;
 
 
 import java.util.ArrayDeque;
@@ -32,11 +31,11 @@ public class CommandManager {
         } catch (NullPointerException e) {
             message = "Аргумент передан неверно: " + e.getMessage();
             log.error(message);
-            return new NetworkObject(ApplicationStatus.ERROR, request.userLogin(), "", "", "", message, null);
+            return new NetworkObject(request.id(), ApplicationStatus.ERROR, request.userLogin(), "", "", "", message, null);
         } catch (Exception e){
             message = "Ошибка выполнения команды: " + e.getMessage();
             log.error(message);
-            return new NetworkObject(ApplicationStatus.ERROR, request.userLogin(), "", "", "", message, null);
+            return new NetworkObject(request.id(), ApplicationStatus.ERROR, request.userLogin(), "", "", "", message, null);
         }
     }
 

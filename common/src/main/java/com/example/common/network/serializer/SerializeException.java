@@ -1,4 +1,4 @@
-package com.example.network.serializer;
+package com.example.common.network.serializer;
 
 /**
  * Выбрасывается в сериализаторе, если не получается восстановить объект T из Object.

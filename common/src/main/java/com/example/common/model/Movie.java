@@ -1,4 +1,4 @@
-package com.example.model;
+package com.example.common.model;
 
 import lombok.Getter;
 import lombok.Setter;
@@ -7,6 +7,10 @@ import java.io.Serializable;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.lang.Comparable;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 public class Movie implements Comparable<Movie>, Serializable {
     private final SimpleDateFormat DATE_FORMAT = new SimpleDateFormat("yyyy-MM-dd");
@@ -96,5 +100,73 @@ public class Movie implements Comparable<Movie>, Serializable {
             this = movie 0
             this < movie -1
          */
+    }
+
+    public static Movie parseFromString(String movieString) {
+        if (movieString == null || movieString.isEmpty()) {
+            throw new IllegalArgumentException("Строка фильма не может быть пустой.");
+        }
+
+        try {
+            // Убираем внешние скобки и пробелы
+            movieString = movieString.trim().substring("Movie{".length(), movieString.length() - 1);
+
+            // Используем Map для удобного парсинга полей
+            Map<String, String> fields = new HashMap<>();
+            // Используем регулярное выражение для разделения полей по запятым, игнорируя запятые внутри скобок
+            Pattern pattern = Pattern.compile("(\\w+)=(?:'([^']*)'|([^,]+)),?");
+            Matcher matcher = pattern.matcher(movieString);
+
+            while (matcher.find()) {
+                String key = matcher.group(1);
+                String value = matcher.group(2) != null ? matcher.group(2) : matcher.group(3);
+                fields.put(key, value.trim());
+            }
+
+            // Извлекаем и преобразуем каждое поле
+            int id = Integer.parseInt(fields.get("id"));
+            String name = fields.get("name");
+
+            // Парсинг Coordinates
+            String coordsString = fields.get("coordinates").trim();
+            coordsString = coordsString.substring(1, coordsString.length() - 1); // Удаляем скобки
+            String[] coordsParts = coordsString.split(",");
+            Double x = Double.parseDouble(coordsParts[0].trim());
+            Float y = Float.parseFloat(coordsParts[1].trim());
+            Coordinates coordinates = new Coordinates(x, y);
+
+            // Парсинг дат и других полей
+            Date creationDate = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSS").parse(fields.get("creationDate"));
+            Long oscarsCount = Long.parseLong(fields.get("oscarsCount"));
+            Long usaBoxOffice = Long.parseLong(fields.get("usaBoxOffice"));
+            MovieGenre genre = fields.containsKey("genre") ? MovieGenre.valueOf(fields.get("genre").toUpperCase()) : null;
+            MpaaRating mpaaRating = fields.containsKey("mpaaRating") ? MpaaRating.valueOf(fields.get("mpaaRating").toUpperCase()) : null;
+
+            // Парсинг Director
+            String directorString = fields.get("director");
+            Person director = null;
+            if (directorString != null) {
+                director = Person.parseFromString(directorString);
+            }
+
+            String ownerLogin = fields.get("owner_id");
+
+            return new Movie(id, name, coordinates, creationDate, oscarsCount, usaBoxOffice, genre, mpaaRating, director, ownerLogin);
+
+        } catch (Exception e) {
+            // Логируем ошибку и бросаем исключение с понятным сообщением
+            throw new IllegalArgumentException("Ошибка при парсинге строки фильма: " + e.getMessage(), e);
+        }
+    }
+
+    public boolean validate(){
+        if (name == null || name.isEmpty()) return false;
+        if (coordinates == null) return false;
+        if (oscarsCount == 0) return false;
+        if (usaBoxOffice == 0) return false;
+        if (genre == null) return false;
+        if (mpaaRating == null) return false;
+        return director != null;
+
     }
 }

@@ -1,4 +1,4 @@
-package com.example.common.command.commands;
+package com.example.commands;
 
 public class ExecuteScript {
 }

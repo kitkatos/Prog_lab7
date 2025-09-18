@@ -1,4 +1,4 @@
-package com.example.DB;
+package com.example.common.network;
 
 import lombok.extern.log4j.Log4j2;
 

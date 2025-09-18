@@ -1,6 +1,7 @@
-package com.example;
+package com.example.common.command;
 
-import com.example.network.NetworkObject;
+import com.example.common.network.ApplicationStatus;
+import com.example.common.network.NetworkObject;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 
@@ -16,7 +17,7 @@ public abstract class Command {
     private final String description;
 
     public NetworkObject execute(NetworkObject request) throws Exception{
-        return new NetworkObject(ApplicationStatus.RUNNING, request.userLogin(), "", "", "", "Команда успешно выполнена", null);
+        return new NetworkObject(request.id(), ApplicationStatus.RUNNING, request.userLogin(), "", "", "", "Команда успешно выполнена", null);
     }
 
     @Override

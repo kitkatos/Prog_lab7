@@ -1,6 +1,8 @@
-package com.example.common.IO.movieInput;
+package com.example.IO.movieInput;
 
-import com.example.common.IO.interfaces.OutputManager;
+import com.example.IO.exception.EmptyInputException;
+import com.example.IO.exception.OutOfRangeException;
+import com.example.IO.interfaces.OutputManager;
 import com.example.common.IO.exception.*;
 import lombok.extern.log4j.Log4j2;
 

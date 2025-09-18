@@ -1,132 +1,121 @@
-package com.example.network;
+package com.example.common.network;
 
-import com.example.network.serializer.NetworkSerializer;
+import com.example.common.network.serializer.NetworkSerializer;
+import lombok.Getter;
 import lombok.extern.log4j.Log4j2;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
-import java.net.SocketAddress;
 import java.nio.ByteBuffer;
 import java.nio.channels.DatagramChannel;
 
 /**
- * Главный класс для обмена данным.
- * Хранит в себе адрес подключения и порт.
- * Реализует методы для подключения, отправки и получения информации.
+ * Класс-обертка для управления операциями отправки и получения данных.
  */
 @Log4j2
 public class UDPManager {
-    private final int port; /* будет 1112 */
-    private final String address; /* имя или адрес хоста */
+
     private final NetworkSerializer serializer;
-    ByteBuffer buffer;
-    DatagramChannel channel;
-    SocketAddress addr;
+    private final NetworkObjectBuilder builder;
+    @Getter
+    private final DatagramChannel channel;
+    private final InetSocketAddress serverAddress;
+    private final ByteBuffer buffer = ByteBuffer.allocate(65507); // Максимальный размер UDP-пакета
 
     /**
-     * Конструктор для выбора порта и адреса
-     * @param port 1112
-     * @param address может быть lokalhost или какоето имя или IP адресс
-     * @param serializer новый сериализатор
+     * Конструктор для использования на сервере.
+     * @param channel DatagramChannel, уже связанный с портом
+     * @param serializer экземпляр NetworkSerializer
+     * @param builder экземпляр NetworkObjectBuilder
      */
-    public UDPManager(int port, String address, NetworkSerializer serializer){
-        this.port = port;
-        this.address = address;
+    public UDPManager(DatagramChannel channel, NetworkSerializer serializer, NetworkObjectBuilder builder) {
+        this.channel = channel;
         this.serializer = serializer;
-        SocketAddress addr = new InetSocketAddress(address, port);
+        this.builder = builder;
+        this.serverAddress = null; // Не используется на сервере
     }
 
     /**
-     * Создает канал данных в неблокирующем режиме и буфер максимального размера
+     * Конструктор для использования на клиенте.
+     * @param channel DatagramChannel, уже связанный с портом
+     * @param serializer экземпляр NetworkSerializer
+     * @param builder экземпляр NetworkObjectBuilder
+     * @param serverAddress адрес и порт сервера
      */
-    public void connect() {
-        try {
-            ByteBuffer buffer = ByteBuffer.allocate(65117);
-            DatagramChannel channel = DatagramChannel.open();
-            channel.configureBlocking(false);
-            log.info("DatagramChannel успешно открыт");
-        } catch (IOException e) {
-            log.error("Проблемы с открытием DatagramChannel");
-        }
+    public UDPManager(DatagramChannel channel, NetworkSerializer serializer, NetworkObjectBuilder builder, InetSocketAddress serverAddress) {
+        this.channel = channel;
+        this.serializer = serializer;
+        this.builder = builder;
+        this.serverAddress = serverAddress;
     }
 
     /**
-     * Слушает канал и собирает NetworkObject из пакетов.
-     * Так как UDP пакеты огранчиены по размеру, сначала получает количесво пакетов,
-     * а затем поочередно составные части сообщения.
-     * Все они собираются в один массив байт, который целиком десериализуется.
-     * @return NetworkObject или Null
+     * Отправляет NetworkObject, разбивая его на пакеты.
+     * Использует адрес для отправки.
+     * @param data NetworkObject для отправки
+     * @param targetAddress адрес получателя
      */
-    public NetworkObject receiver() {
+    public void send(NetworkObject data, InetSocketAddress targetAddress) throws IOException {
         try {
-            buffer.clear();
-            SocketAddress addr1 = channel.receive(buffer);
-            log.info("Сервер пытается получить данные");
+            byte[] objectBytes = serializer.serialize(data);
+            long requestId = data.id();
+            int packetSize = 65507 - 20; // Макс. размер пакета минус примерный размер заголовка
+            int totalPackets = (int) Math.ceil((double) objectBytes.length / packetSize);
 
-            if (addr1 != null) {
-                log.info("Ненулевые данные прочитаны");
-                buffer.flip();
+            for (int i = 0; i < totalPackets; i++) {
+                int offset = i * packetSize;
+                int length = Math.min(packetSize, objectBytes.length - offset);
+                byte[] partData = new byte[length];
+                System.arraycopy(objectBytes, offset, partData, 0, length);
 
-                byte[] packagesCountByte = new byte[buffer.remaining()];
-                buffer.get(packagesCountByte);
-                log.info("Количество блоко записано в виде байтов в массив");
+                NetworkPacket packet = new NetworkPacket(requestId, totalPackets, i, partData);
+                byte[] packetBytes = serializer.serialize(packet);
 
-                int packagesCount = serializer.deserialize(packagesCountByte);
-                log.info("Количество блоков успешно десериализировано");
-
-                byte[] deserBytes = new byte[packagesCount * 65117];
-                int offset = 0;
-                for (int i = 1; i <= packagesCount; i++) {
-                    buffer.clear();
-                    channel.receive(buffer);
-                    log.info("Блок {} получен от клиента и записан в буфер", i);
-                    buffer.flip();
-                    int len = buffer.remaining();
-                    buffer.get(deserBytes, offset, len);
-                    offset += len;
-                    log.info("Блок {} успешно дописан в массив", i);
-                }
-                log.info("Поблочное получение запроса завершено");
-                NetworkObject ans = serializer.deserialize(deserBytes);
-                log.info("NetworkObject получен");
-                return ans;
+                ByteBuffer packetBuffer = ByteBuffer.wrap(packetBytes);
+                channel.send(packetBuffer, targetAddress);
             }
-            log.info("Получены нулевые данные");
-            return null;
+            log.info("Сообщение {} успешно отправлено, разбито на {} пакетов.", requestId, totalPackets);
         } catch (IOException e) {
-            log.error("Возникли проблемы при получении количества пакетов или считывания одного из пакетов сообщения");
-            return null;
+            log.error("Ошибка при отправке данных: {}", e.getMessage());
+            throw e;
         }
     }
 
     /**
-     * Отправляет пакеты.
-     * Так как UDP пакеты огранчиены по размеру, сначала отправляет количесво пакетов,
-     * а затем поочередно составные части сообщения.
-     * Подразумевается, что проблем с сериализацией и отправкой не будет.
-     * @param data NetworkObject
+     * Отправляет NetworkObject на адрес, указанный при создании клиента.
+     * Этот метод предназначен только для использования на клиенте.
+     * @param data NetworkObject для отправки
      */
-    public void send(NetworkObject data) {
+    public void send(NetworkObject data) throws IOException {
+        if (serverAddress == null) {
+            throw new IllegalStateException("Для отправки на сервер используйте метод send(data, serverAddress)");
+        }
+        send(data, serverAddress);
+    }
+
+    /**
+     * Принимает пакеты и собирает из них NetworkObject.
+     * @return готовый NetworkObject+InetSocketAddress или null
+     */
+    public ReceiveObject receive() throws IOException, ClassNotFoundException {
         buffer.clear();
-        try{
-            byte[] bytes = serializer.serialize(data);
-            log.info("Ответ сереализован");
-            int count = (int) Math.ceil((double) bytes.length / 65117);
-            buffer.put(serializer.serialize(count));
-            log.info("Количество блоков записано в буфер");
-            channel.send(buffer, addr);
-            log.info("Данные о количестве блоков отправлены на клиента");
+        InetSocketAddress clientAddress = (InetSocketAddress) channel.receive(buffer);
 
-            for (int i = 1; i <= count; i++) {
-                buffer = ByteBuffer.wrap(bytes, 65117 * i, Math.min(65117, bytes.length - 65117 * i));
-                log.info("Блок {} записан в буфер", i+1);
-                channel.send(buffer, addr);
-                log.info("Блок {} отправлен серверу", i+1);
+        if (clientAddress != null) {
+            log.info("Пакет получен");
+            buffer.flip();
+            byte[] data = new byte[buffer.remaining()];
+            buffer.get(data);
+
+            try {
+                NetworkPacket packet = serializer.deserialize(data);
+                log.info("Пакет передан сборщику объектов");
+                return new ReceiveObject(builder.build(packet), clientAddress);
+            } catch (IOException | ClassNotFoundException e) {
+                log.error("Ошибка десериализации пакета: {}", e.getMessage());
+                throw e;
             }
-            log.info("Поблочная отправка запроса завершена");
-        } catch (Exception e) {
-            log.error("ошибка в упаковке или отправке данных", e);
         }
-
+        return null;
     }
 }

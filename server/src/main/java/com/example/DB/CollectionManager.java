@@ -1,8 +1,7 @@
 package com.example.DB;
 
-import com.example.model.Movie;
+import com.example.common.model.Movie;
 
-import java.util.Date;
 import java.util.TreeSet;
 
 /**
